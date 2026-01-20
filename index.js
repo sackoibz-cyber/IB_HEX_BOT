@@ -1,17 +1,27 @@
 const {
   default: makeWASocket,
-  useMultiFileAuthState,
-  DisconnectReason
+  DisconnectReason,
+  useSingleFileAuthState
 } = require("@whiskeysockets/baileys")
 
 const Pino = require("pino")
+const fs = require("fs")
 const http = require("http")
 const config = require("./config")
 
-// 🔥 OBLIGATOIRE POUR RENDER
-const PORT = process.env.PORT || 3000
+/* =========================
+   🔐 GESTION SESSION_ID
+========================= */
+if (process.env.SESSION_ID) {
+  fs.writeFileSync("./session.json", process.env.SESSION_ID)
+}
 
-// Petit serveur HTTP pour Render
+const { state, saveCreds } = useSingleFileAuthState("./session.json")
+
+/* =========================
+   🌐 SERVEUR HTTP (RENDER)
+========================= */
+const PORT = process.env.PORT || 3000
 http.createServer((req, res) => {
   res.writeHead(200)
   res.end("IB-HEX-BOT EN LIGNE")
@@ -19,9 +29,10 @@ http.createServer((req, res) => {
   console.log("🌐 Serveur actif sur le port", PORT)
 })
 
+/* =========================
+   🤖 BOT WHATSAPP
+========================= */
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("./session")
-
   const sock = makeWASocket({
     logger: Pino({ level: "silent" }),
     auth: state,
@@ -30,14 +41,8 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds)
 
-  // ✅ GESTION DU QR MODERNE
   sock.ev.on("connection.update", (update) => {
-    const { connection, qr, lastDisconnect } = update
-
-    if (qr) {
-      console.log("📸 SCANNE CE QR DANS WHATSAPP ⬇️")
-      console.log(qr)
-    }
+    const { connection, lastDisconnect } = update
 
     if (connection === "open") {
       console.log("✅ IB-HEX-BOT CONNECTÉ À WHATSAPP")
@@ -50,7 +55,7 @@ async function startBot() {
       ) {
         startBot()
       } else {
-        console.log("❌ Déconnecté définitivement")
+        console.log("❌ SESSION DÉCONNECTÉE")
       }
     }
   })
@@ -65,7 +70,7 @@ async function startBot() {
       msg.message.extendedTextMessage?.text ||
       ""
 
-    // ❌ Ignore sans préfixe
+    // ❌ IGNORER SANS PRÉFIXE
     if (!body.startsWith(config.prefix)) return
 
     const command = body
@@ -73,6 +78,7 @@ async function startBot() {
       .trim()
       .toLowerCase()
 
+    // ===== MENU =====
     if (command === "menu") {
       await sock.sendMessage(from, {
         text: `
@@ -80,22 +86,25 @@ async function startBot() {
 │ Bot : ${config.botName}
 │ Mode : ${config.mode}
 │ Préfixe : ${config.prefix}
-│ Owner : ${config.ownerName}
+│ Propriétaire : ${config.ownerName}
 │ Version : ${config.version}
 ╰──────────────🥷
 
+🥷 ${config.prefix}menu
 🥷 ${config.prefix}alive
 🥷 ${config.prefix}owner
 `
       })
     }
 
+    // ===== ALIVE =====
     if (command === "alive") {
       await sock.sendMessage(from, {
-        text: "🤖 IB-HEX-BOT est actif ✅"
+        text: "🤖 IB-HEX-BOT est actif et en ligne ✅"
       })
     }
 
+    // ===== OWNER =====
     if (command === "owner") {
       await sock.sendMessage(from, {
         text: `👑 Propriétaire : ${config.ownerName}`
