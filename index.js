@@ -4,7 +4,6 @@ const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 
 async function startBot() {
-    // Authentification multi-fichiers
     const { state, saveCreds } = await useMultiFileAuthState('session');
 
     const sock = makeWASocket({
@@ -17,18 +16,20 @@ async function startBot() {
 
     // Charger toutes les commandes dans commands/
     const commands = new Map();
-    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-    for (const file of commandFiles) {
-        const command = require(`./commands/${file}`);
-        commands.set(command.name.toLowerCase(), command);
+    const commandFolders = fs.readdirSync('./commands');
+
+    for (const folder of commandFolders) {
+        const files = fs.readdirSync(`./commands/${folder}`).filter(f => f.endsWith('.js'));
+        for (const file of files) {
+            const command = require(`./commands/${folder}/${file}`);
+            commands.set(command.name.toLowerCase(), command);
+        }
     }
 
     // Gestion de la connexion
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-
         if (qr) qrcode.generate(qr, { small: true });
-
         if (connection === 'close') {
             const reason = lastDisconnect.error?.output?.statusCode;
             console.log('Déconnexion :', reason);
@@ -47,10 +48,8 @@ async function startBot() {
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
         if (!text) return;
 
-        // Vérifier préfixe obligatoire "Ib"
-        if (!text.startsWith('Ib')) return;
+        if (!text.startsWith('Ib')) return; // préfixe obligatoire
 
-        // Extraire la commande après le préfixe
         const commandName = text.slice(2).toLowerCase();
         const command = commands.get(commandName);
         if (command) {
