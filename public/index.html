@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IB-HEX-BOT - QR & Session</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>IB-HEX-BOT</h1>
+        <p>Scannez le QR avec WhatsApp ou utilisez la SESSION_ID</p>
+
+        <div class="qr-section">
+            <img id="qr" src="" alt="QR Code" />
+        </div>
+
+        <div class="session-section">
+            <label for="session">SESSION_ID :</label>
+            <input type="text" id="session" readonly />
+            <button onclick="copySession()">Copier</button>
+        </div>
+
+        <p class="status" id="status">Connexion...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
