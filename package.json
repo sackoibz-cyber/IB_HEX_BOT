@@ -1,15 +1,14 @@
 {
   "name": "ib-hex-bot",
-  "version": "2.0.0",
-  "description": "Bot WhatsApp IB HEX BOT",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot IB HEX",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.8",
-    "pino": "^8.0.0",
-    "axios": "^1.6.0",
-    "moment-timezone": "^0.5.43"
+    "pino": "^8.15.0",
+    "qrcode-terminal": "^0.12.0"
   }
 }
