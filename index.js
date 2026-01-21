@@ -1,82 +1,69 @@
-const {
-  default: makeWASocket,
-  DisconnectReason,
-  useMultiFileAuthState
-} = require("@whiskeysockets/baileys")
-const Pino = require("pino")
-const fs = require("fs")
-const http = require("http")
-const qrcode = require("qrcode")
-const config = require("./config")
+// index.js
+import { default as makeWASocket, useSingleFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import { writeFileSync } from "fs";
+import QRCode from "qrcode";
+import http from "http";
+import { join } from "path";
 
-const AUTH_FOLDER = "./auth"
-if (!fs.existsSync(AUTH_FOLDER)) fs.mkdirSync(AUTH_FOLDER)
+// Fichier de session
+const { state, saveCreds } = useSingleFileAuthState(join("./", "session.json"));
 
-const PORT = process.env.PORT || 3000
+// Création du bot WhatsApp
+const startBot = () => {
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false, // On gère le QR via page web
+    });
 
-// 🌐 Serveur Web pour afficher QR
-let qrCodeDataUrl = ""
+    // Sauvegarde automatique des creds
+    sock.ev.on("creds.update", saveCreds);
 
-http.createServer(async (req, res) => {
-  if (req.url === "/") {
-    res.writeHead(200, { "Content-Type": "text/html" })
-    res.end(`
-      <h2>IB-HEX-BOT - Scanner le QR WhatsApp</h2>
-      <p>Ouvre WhatsApp et scanne le QR pour générer la SESSION_ID</p>
-      ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" />` : "<p>QR non généré</p>"}
-      <p>Une fois scanné, ton bot sera connecté automatiquement.</p>
-    `)
-  } else {
-    res.writeHead(404)
-    res.end("Not found")
-  }
-}).listen(PORT, () => console.log("Serveur web prêt sur le port", PORT))
+    // Événement connection.update pour récupérer le QR
+    sock.ev.on("connection.update", async (update) => {
+        const { connection, qr } = update;
 
-// 🔐 Bot WhatsApp avec QR
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER)
+        // Génération QR pour la page web
+        if (qr) {
+            // Convertit le QR en image data URL
+            const qrImage = await QRCode.toDataURL(qr);
+            writeFileSync("qr.html", `
+                <html>
+                    <head><meta charset="UTF-8"><title>IB-HEX-BOT - QR WhatsApp</title></head>
+                    <body>
+                        <h2>IB-HEX-BOT - Scanner le QR WhatsApp</h2>
+                        <p>Ouvre WhatsApp et scanne le QR pour générer la SESSION_ID</p>
+                        <img src="${qrImage}" alt="QR WhatsApp"/>
+                        <p>Une fois scanné, ton bot sera connecté automatiquement.</p>
+                    </body>
+                </html>
+            `);
+        }
 
-  const sock = makeWASocket({
-    logger: Pino({ level: "silent" }),
-    auth: state,
-    browser: ["IB-HEX-BOT", "Chrome", "1.0"]
-  })
+        if (connection === "close") {
+            console.log("Connexion fermée, tentative de reconnexion...");
+            startBot();
+        } else if (connection === "open") {
+            console.log("Bot connecté ✅");
+        }
+    });
 
-  sock.ev.on("creds.update", saveCreds)
+    return sock;
+};
 
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, qr } = update
+startBot();
 
-    // Génère le QR pour la page web
-    if (qr) {
-      qrCodeDataUrl = await qrcode.toDataURL(qr)
-      console.log("QR généré pour la page Web")
+// Serveur web pour afficher QR sur page
+http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+
+    try {
+        const qrPage = join("./", "qr.html");
+        const html = require("fs").readFileSync(qrPage, "utf-8");
+        res.end(html);
+    } catch (e) {
+        res.end("<h2>IB-HEX-BOT - Scanner le QR WhatsApp</h2><p>QR non généré</p><p>Ouvre WhatsApp et scanne le QR pour générer la SESSION_ID</p>");
     }
-
-    if (connection === "open") console.log("✅ BOT CONNECTÉ À WHATSAPP")
-
-    if (connection === "close") {
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
-      if (shouldReconnect) startBot()
-    }
-  })
-
-  // Exemple : réponse menu
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0]
-    if (!msg.message) return
-    const from = msg.key.remoteJid
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      ""
-    if (!text.startsWith(config.prefix)) return
-    const cmd = text.slice(config.prefix.length).trim().toLowerCase()
-    if (cmd === "menu") {
-      await sock.sendMessage(from, { text: "🤖 IB-HEX-BOT est en ligne ✅" })
-    }
-  })
-}
-
-startBot()
+}).listen(process.env.PORT || 10000, () => {
+    console.log(`Serveur web actif sur le port ${process.env.PORT || 10000}`);
+    console.log(`Ouvre la page web pour scanner le QR.`);
+});
