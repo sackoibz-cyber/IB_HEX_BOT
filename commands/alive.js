@@ -1,5 +1,7 @@
-module.exports = async (sock, msg) => {
-  await sock.sendMessage(msg.key.remoteJid, {
-    text: "🤖 IB_HEX_BOT est actif et fonctionne correctement ✅"
-  })
-}
+module.exports = {
+    name: 'alive',
+    description: 'Vérifie si le bot est en ligne',
+    execute: async (sock, sender) => {
+        await sock.sendMessage(sender, { text: 'Je suis en ligne 😎' });
+    }
+}; 
