@@ -1,40 +1,54 @@
-const qrImg = document.getElementById("qr");
-const sessionInput = document.getElementById("session");
-const statusText = document.getElementById("status");
+// app.js
 
-async function fetchQR() {
-    try {
-        const res = await fetch("/qr");
-        const data = await res.json();
+// Sélection des éléments HTML
+const qrImg = document.getElementById("qr-code");
+const pairBtn = document.getElementById("pair-btn");
+const qrBtn = document.getElementById("qr-btn");
+const phoneInputDiv = document.getElementById("phone-input-div");
+const phoneInput = document.getElementById("phone-number");
+const sendBtn = document.getElementById("send-number");
+const statusDiv = document.getElementById("status");
 
-        if (data.connected) {
-            qrImg.style.display = "none";
-            sessionInput.value = JSON.stringify(data.session);
-            statusText.innerText = "✅ Bot connecté avec SESSION_ID prêt !";
-        } else if (data.qr) {
-            qrImg.src = data.qr;
-            qrImg.style.display = "block";
-            sessionInput.value = "";
-            statusText.innerText = "📡 Scannez le QR pour connecter le bot.";
-        } else {
-            qrImg.style.display = "none";
-            sessionInput.value = "";
-            statusText.innerText = "⚠️ QR non généré, le bot se connecte...";
-        }
-    } catch (err) {
-        console.error(err);
-        statusText.innerText = "⚠️ Erreur de connexion au serveur";
-    }
+// Fonction pour afficher le QR Code
+async function getQRCode() {
+  const res = await fetch("/qr");
+  const data = await res.json();
+  if (!data.connected && data.qr) {
+    qrImg.src = data.qr;
+    statusDiv.innerText = "📱 Scanne le QR Code avec WhatsApp.";
+  } else if (data.connected) {
+    qrImg.src = "";
+    statusDiv.innerText = "✅ Bot déjà connecté.";
+  }
 }
 
-// Copie SESSION_ID dans le presse-papier
-function copySession() {
-    sessionInput.select();
-    sessionInput.setSelectionRange(0, 99999);
-    document.execCommand("copy");
-    alert("SESSION_ID copié !");
+// Afficher le formulaire pour Pair Code
+function showPairForm() {
+  phoneInputDiv.style.display = "block";
 }
 
-// Vérifie toutes les 3 secondes
-setInterval(fetchQR, 3000);
-fetchQR();
+// Envoi du numéro pour générer SESSION_ID
+sendBtn.addEventListener("click", async () => {
+  const number = phoneInput.value.trim();
+  if (!number) return alert("Entre ton numéro WhatsApp !");
+  const res = await fetch(`/pair?number=${encodeURIComponent(number)}`);
+  const data = await res.json();
+  if (data.success) {
+    statusDiv.innerText = "✅ Session ID régénéré avec succès !";
+    phoneInputDiv.style.display = "none";
+    phoneInput.value = "";
+    getQRCode(); // Affiche le QR si besoin
+  } else {
+    statusDiv.innerText = "❌ Erreur lors de la génération de Session.";
+  }
+});
+
+// Boutons
+qrBtn.addEventListener("click", () => {
+  phoneInputDiv.style.display = "none";
+  getQRCode();
+});
+pairBtn.addEventListener("click", showPairForm);
+
+// Initialisation : montre le QR au chargement
+getQRCode();
