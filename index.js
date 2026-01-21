@@ -1,30 +1,25 @@
-// index.js
-import { default as makeWASocket, useSingleFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
-import { writeFileSync } from "fs";
+import makeWASocket, { DisconnectReason, useSingleFileAuthState } from "@whiskeysockets/baileys";
+import { writeFileSync, readFileSync, existsSync } from "fs";
 import QRCode from "qrcode";
 import http from "http";
 import { join } from "path";
 
-// Fichier de session
+// Chemin session
 const { state, saveCreds } = useSingleFileAuthState(join("./", "session.json"));
 
-// Création du bot WhatsApp
+// Fonction pour lancer le bot
 const startBot = () => {
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false, // On gère le QR via page web
+        printQRInTerminal: false
     });
 
-    // Sauvegarde automatique des creds
     sock.ev.on("creds.update", saveCreds);
 
-    // Événement connection.update pour récupérer le QR
     sock.ev.on("connection.update", async (update) => {
         const { connection, qr } = update;
 
-        // Génération QR pour la page web
         if (qr) {
-            // Convertit le QR en image data URL
             const qrImage = await QRCode.toDataURL(qr);
             writeFileSync("qr.html", `
                 <html>
@@ -52,18 +47,17 @@ const startBot = () => {
 
 startBot();
 
-// Serveur web pour afficher QR sur page
+// Serveur web pour afficher le QR
 http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
 
     try {
         const qrPage = join("./", "qr.html");
-        const html = require("fs").readFileSync(qrPage, "utf-8");
+        const html = readFileSync(qrPage, "utf-8");
         res.end(html);
     } catch (e) {
         res.end("<h2>IB-HEX-BOT - Scanner le QR WhatsApp</h2><p>QR non généré</p><p>Ouvre WhatsApp et scanne le QR pour générer la SESSION_ID</p>");
     }
 }).listen(process.env.PORT || 10000, () => {
     console.log(`Serveur web actif sur le port ${process.env.PORT || 10000}`);
-    console.log(`Ouvre la page web pour scanner le QR.`);
 });
