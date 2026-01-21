@@ -87,10 +87,14 @@ async function startBot() {
 
     const cmd = text.slice(2).trim().toLowerCase();
 
+    // Commandes basiques pour tester
     if (cmd === "menu") {
       await sock.sendMessage(from, { text: "🤖 IB-HEX-BOT est en ligne ✅" });
     }
-    // Ici tu peux ajouter toutes les autres commandes comme alive, owner, etc.
+    if (cmd === "alive") {
+      await sock.sendMessage(from, { text: "✅ Bot actif et prêt !" });
+    }
+    // Ici tu peux ajouter toutes tes commandes HEX-BOT
   });
 }
 
