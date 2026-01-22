@@ -1,0 +1,1 @@
+commands hex-bot
