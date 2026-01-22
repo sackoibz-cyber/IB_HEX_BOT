@@ -1,4 +1,7 @@
-# 🤖 IB_HEX_BOT-MD — Bot WhatsApp
+# 🤖 IB_HEX_BOT-MD 
+
+
+— Bot WhatsApp
 
 <p align="center">
   <img src="https://i.ibb.co/vvLVkvkR/IMG-20260118-WA0276.jpg" alt="IB_HEX_BOT Banner" width="100%" style="border-radius:15px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
