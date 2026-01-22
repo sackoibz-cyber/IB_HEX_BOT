@@ -1,76 +1,74 @@
-const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+// Import de Baileys
+const { default: makeWASocket, useSingleFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const { state, saveState } = useSingleFileAuthState('./session/session.json');
 const fs = require('fs');
-const P = require('pino');
-const qrcode = require('qrcode-terminal');
+const path = require('path');
 
-const prefix = 'Ib'; // Préfix obligatoire
-
+// Créer le socket WhatsApp
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('session');
-
-    const { version, isLatest } = await fetchLatestBaileysVersion();
-    console.log(`WhatsApp version: v${version.join('.')}, latest: ${isLatest}`);
-
+    const { version } = await fetchLatestBaileysVersion();
     const sock = makeWASocket({
         auth: state,
-        logger: P({ level: 'silent' }),
         printQRInTerminal: true,
-        version
+        version,
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    // Sauvegarde automatique de la session
+    sock.ev.on('creds.update', saveState);
 
-    // Charger les commandes
-    const commands = new Map();
-    const commandFolders = fs.readdirSync('./commands');
-    for (const folder of commandFolders) {
-        const folderPath = `./commands/${folder}`;
-        if (!fs.lstatSync(folderPath).isDirectory()) continue;
-
-        const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
-        for (const file of commandFiles) {
-            const command = require(`${folderPath}/${file}`);
-            if (command.name) commands.set(command.name, command);
+    // Événement connexion
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if(connection === 'close') {
+            console.log('Connexion fermée, tentative de reconnexion...');
+            const reason = (lastDisconnect.error)?.output?.statusCode;
+            if(reason !== DisconnectReason.loggedOut) {
+                startBot(); // relance le bot automatiquement
+            } else {
+                console.log('Déconnecté car le compte a été déconnecté de WhatsApp.');
+            }
+        } else if(connection === 'open') {
+            console.log('✅ Bot connecté à WhatsApp !');
         }
-    }
+    });
 
-    // Quand un message arrive
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.fromMe) return;
+    // Gestion des messages entrants
+    sock.ev.on('messages.upsert', async (m) => {
+        const msg = m.messages[0];
+        if(!msg.message || msg.key.fromMe) return;
 
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-        if (!text || !text.startsWith(prefix)) return;
+        const from = msg.key.remoteJid;
 
-        const args = text.slice(prefix.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
+        // Commandes simples
+        if(!text) return;
 
-        const command = commands.get(commandName);
-        if (!command) return;
-
-        try {
-            await command.run(sock, msg, args);
-        } catch (err) {
-            console.error(err);
-            await sock.sendMessage(msg.key.remoteJid, { text: '❌ Une erreur est survenue lors de l’exécution de la commande.' });
-        }
-    });
-
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-
-        if (qr) qrcode.generate(qr, { small: true });
-
-        if (connection === 'close') {
-            const reason = lastDisconnect.error?.output?.statusCode;
-            console.log('Déconnexion:', reason);
-
-            if (reason !== DisconnectReason.loggedOut) startBot();
-            else console.log('Déconnecté, connectez-vous à nouveau.');
-        } else if (connection === 'open') {
-            console.log('✅ Bot WhatsApp connecté !');
+        if(text.startsWith('!alive')) {
+            await sock.sendMessage(from, { text: '🤖 Bot est en ligne !' });
+        } 
+        else if(text.startsWith('!ping')) {
+            await sock.sendMessage(from, { text: '🏓 Pong !' });
+        } 
+        else if(text.startsWith('!menu')) {
+            await sock.sendMessage(from, { text: '📜 Menu du bot : !alive, !ping, !menu, !vv, !dev, !sudo, !owner, !allvar' });
+        } 
+        else if(text.startsWith('!vv')) {
+            await sock.sendMessage(from, { text: 'Version du bot : 1.0.0' });
+        } 
+        else if(text.startsWith('!dev')) {
+            await sock.sendMessage(from, { text: 'Développeur : IB-HEX' });
+        } 
+        else if(text.startsWith('!sudo')) {
+            await sock.sendMessage(from, { text: 'Commande sudo exécutée !' });
+        } 
+        else if(text.startsWith('!owner')) {
+            await sock.sendMessage(from, { text: 'Propriétaire : IB-HEX' });
+        } 
+        else if(text.startsWith('!allvar')) {
+            await sock.sendMessage(from, { text: 'Toutes les variables sont opérationnelles !' });
         }
     });
 }
 
+// Démarrer le bot
 startBot();
