@@ -24,10 +24,10 @@ Préfixe obligatoire : Ib
         <img src="https://img.shields.io/badge/Baileys-Web%20API-orange?style=flat-square" alt="Using Baileys Web API" />
     </a>
     <a href="https://github.com/sackoibz-cyber/IB_HEX_BOT?tab=readme-ov-file">
-        <img src="https://img.shields.io/github/stars/Ainz-devs/OVL-MD-V2?style=flat-square" alt="Stars" />
+        <img src="https://img.shields.io/https://github.com/sackoibz-cyber/IB_HEX_BOT/blob/main/README.md-V2?style=flat-square" alt="Stars" />
     </a>
-    <a href="https://github.com/Ainz-devs/OVL-MD-V2/network/members">
-        <img src="https://img.shields.io/github/forks/Ainz-devs/OVL-MD-V2?style=flat-square" alt="Forks" />
+    <a href="https://github.com/sackoibz-cyber/IB_HEX_BOT/blob/main/README.md/network/members">
+        <img src="https://img.shields.io/sackoibz-cyber/IB_HEX_BOT/blob/main/README.md-V2?style=flat-square" alt="Forks" />
     </a>
 </p>
 
