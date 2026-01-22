@@ -1,15 +1,19 @@
 {
-  "name": "ib-hex-bot",
+  "name": "IB_HEX_BOT",
   "version": "1.0.0",
-  "description": "Bot WhatsApp IB HEX avec préfix Ib",
+  "description": "Bot WhatsApp IB_HEX",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "author": "IB-HEX",
+  "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.8",
-    "pino": "^8.15.0",
-    "qrcode-terminal": "^0.12.0",
-    "fs": "0.0.1-security"
+    "@whiskeysockets/baileys": "^6.17.1",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
