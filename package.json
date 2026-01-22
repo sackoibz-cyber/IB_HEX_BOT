@@ -1,5 +1,5 @@
 {
-  "name": "IB_HEX_BOT",
+  "name": "ib_hex_bot",
   "version": "1.0.0",
   "description": "Bot WhatsApp IB_HEX",
   "main": "index.js",
@@ -9,9 +9,8 @@
   "author": "IB-HEX",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.17.1",
-    "fs": "^0.0.1-security",
-    "path": "^0.12.7"
+    "@hapi/boom": "^10.0.0",
+    "@whiskeysockets/baileys": "^6.17.1"
   },
   "engines": {
     "node": ">=18"
