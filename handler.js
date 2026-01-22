@@ -1,4 +1,87 @@
+// ==================== handler.js ====================
+import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import config from './config.js';
+import { handleMention } from './system/mentionHandler.js';
+import {
+  storeMessage,
+  downloadContentFromMessage,
+  uploadImage,
+  handleAutoread,
+  handleBotModes
+} from './system/initModules.js';
+import checkAdminOrOwner from './system/checkAdmin.js';
+import { WARN_MESSAGES } from './system/warnMessages.js';
+import { handleMenuReply } from './commands/menu.js';
 
+// ================== 🚀 Startup Grace ==================
+global.botStartTime ??= Date.now();
+global.startupGrace ??= { enabled: true, duration: 20000 };
+setTimeout(() => {
+  global.startupGrace.enabled = false;
+  console.log('⚡ Startup grace terminé');
+}, global.startupGrace.duration);
+
+// ================== 🔹 Gestion persistante des globals ==================
+const SETTINGS_FILE = './data/settings.json';
+let savedSettings = {};
+try {
+  savedSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+} catch {
+  console.log('⚠️ Aucune sauvegarde existante, utilisation des valeurs par défaut.');
+}
+
+// ================== 🔹 Initialisation sécurisée ==================
+const commands = {};
+global.groupThrottle ??= savedSettings.groupThrottle || {};
+global.userThrottle ??= new Set(savedSettings.userThrottle || []);
+global.disabledGroups ??= new Set(savedSettings.disabledGroups || []);
+global.botModes ??= savedSettings.botModes || { typing: false, recording: false, autoread: { enabled: false } };
+
+// ================== 🔹 Globals AntiBot ==================
+global.antiBotGroups ??= {};
+global.botWarns ??= {};
+global.messageRate ??= {};
+
+// ================== 🔹 Sauvegarde avec debounce ==================
+let saveTimeout;
+function saveSettings() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    const data = {
+      groupThrottle: global.groupThrottle,
+      userThrottle: Array.from(global.userThrottle),
+      disabledGroups: Array.from(global.disabledGroups),
+      botModes: global.botModes
+    };
+    fs.writeFile(SETTINGS_FILE, JSON.stringify(data, null, 2), () => {});
+  }, 2000);
+}
+
+// ================== 🔹 Wrappers groupes ==================
+global.disableGroup = chatId => { global.disabledGroups.add(chatId); saveSettings(); };
+global.enableGroup = chatId => { global.disabledGroups.delete(chatId); saveSettings(); };
+
+// ================== 📂 Chargement commandes (UNE FOIS) ==================
+let commandsLoaded = false;
+const loadCommands = async (dir = './commands') => {
+  if (commandsLoaded) return;
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    if (fs.statSync(fullPath).isDirectory()) {
+      await loadCommands(fullPath);
+      continue;
+    }
+    if (!file.endsWith('.js')) continue;
+    const module = await import(pathToFileURL(fullPath).href);
+    const cmd = module.default || module;
+    if (cmd?.name) commands[cmd.name.toLowerCase()] = cmd;
+  }
+  global.participantCommands = Object.values(commands).filter(cmd => typeof cmd.participantUpdate === 'function');
+  commandsLoaded = true;
+  
 // ================== 🧠 smsg ==================
 const smsg = (sock, m) => {
   if (!m?.message) return {};
