@@ -1,24 +1,24 @@
-const { default: makeWASocket, useSingleFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const fs = require('fs');
 const P = require('pino');
+const qrcode = require('qrcode-terminal');
 
-const prefix = 'Ib'; // ton préfix obligatoire
-
-// Authentification
-const { state, saveState } = useSingleFileAuthState('./auth_info.json');
+const prefix = 'Ib'; // Préfix obligatoire
 
 async function startBot() {
+    const { state, saveCreds } = await useMultiFileAuthState('session');
+
     const { version, isLatest } = await fetchLatestBaileysVersion();
-    console.log(`Using WhatsApp version v${version.join('.')}, latest: ${isLatest}`);
+    console.log(`WhatsApp version: v${version.join('.')}, latest: ${isLatest}`);
 
     const sock = makeWASocket({
+        auth: state,
         logger: P({ level: 'silent' }),
         printQRInTerminal: true,
-        auth: state,
         version
     });
 
-    sock.ev.on('creds.update', saveState);
+    sock.ev.on('creds.update', saveCreds);
 
     // Charger les commandes
     const commands = new Map();
@@ -35,13 +35,12 @@ async function startBot() {
     }
 
     // Quand un message arrive
-    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
 
-        let text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-        if (!text) return;
-        if (!text.startsWith(prefix)) return;
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        if (!text || !text.startsWith(prefix)) return;
 
         const args = text.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
@@ -51,22 +50,25 @@ async function startBot() {
 
         try {
             await command.run(sock, msg, args);
-        } catch (error) {
-            console.error(error);
-            await sock.sendMessage(msg.key.remoteJid, { text: '❌ Une erreur est survenue lors de l’exécution de cette commande.' });
+        } catch (err) {
+            console.error(err);
+            await sock.sendMessage(msg.key.remoteJid, { text: '❌ Une erreur est survenue lors de l’exécution de la commande.' });
         }
     });
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) qrcode.generate(qr, { small: true });
+
         if (connection === 'close') {
-            if ((lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut) {
-                startBot(); // reconnect
-            } else {
-                console.log('Déconnecté. Connectez-vous à nouveau.');
-            }
+            const reason = lastDisconnect.error?.output?.statusCode;
+            console.log('Déconnexion:', reason);
+
+            if (reason !== DisconnectReason.loggedOut) startBot();
+            else console.log('Déconnecté, connectez-vous à nouveau.');
         } else if (connection === 'open') {
-            console.log('🤖 Bot WhatsApp connecté !');
+            console.log('✅ Bot WhatsApp connecté !');
         }
     });
 }
