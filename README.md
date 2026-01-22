@@ -23,7 +23,7 @@ Préfixe obligatoire : Ib
     <a href="https://github.com/WhiskeySockets/Baileys">
         <img src="https://img.shields.io/badge/Baileys-Web%20API-orange?style=flat-square" alt="Using Baileys Web API" />
     </a>
-    <a href="https://github.com/Ainz-devs/OVL-MD-V2/stargaze">
+    <a href="https://github.com/sackoibz-cyber/IB_HEX_BOT?tab=readme-ov-file">
         <img src="https://img.shields.io/github/stars/Ainz-devs/OVL-MD-V2?style=flat-square" alt="Stars" />
     </a>
     <a href="https://github.com/Ainz-devs/OVL-MD-V2/network/members">
