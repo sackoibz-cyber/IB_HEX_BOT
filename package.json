@@ -1,7 +1,7 @@
 {
   "name": "ib-hex-bot",
   "version": "1.0.0",
-  "description": "WhatsApp Bot IB HEX",
+  "description": "Bot WhatsApp IB HEX avec préfix Ib",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,6 +9,7 @@
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.8",
     "pino": "^8.15.0",
-    "qrcode-terminal": "^0.12.0"
+    "qrcode-terminal": "^0.12.0",
+    "fs": "0.0.1-security"
   }
 }
