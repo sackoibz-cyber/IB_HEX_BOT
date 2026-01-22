@@ -1,81 +1,74 @@
-const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const P = require('pino');
-const qrcode = require('qrcode-terminal');
+const { default: makeWASocket, useSingleFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const fs = require('fs');
-const path = require('path');
+const P = require('pino');
 
-const PREFIX = 'Ib'; // Préfixe obligatoire
+const prefix = 'Ib'; // ton préfix obligatoire
 
-const commands = new Map();
+// Authentification
+const { state, saveState } = useSingleFileAuthState('./auth_info.json');
 
-async function loadCommands() {
-    const commandFolders = fs.readdirSync('./commands/');
+async function startBot() {
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log(`Using WhatsApp version v${version.join('.')}, latest: ${isLatest}`);
 
+    const sock = makeWASocket({
+        logger: P({ level: 'silent' }),
+        printQRInTerminal: true,
+        auth: state,
+        version
+    });
+
+    sock.ev.on('creds.update', saveState);
+
+    // Charger les commandes
+    const commands = new Map();
+    const commandFolders = fs.readdirSync('./commands');
     for (const folder of commandFolders) {
-        const folderPath = path.join('./commands/', folder);
+        const folderPath = `./commands/${folder}`;
         if (!fs.lstatSync(folderPath).isDirectory()) continue;
 
-        const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.js'));
-        for (const file of files) {
-            const command = require(path.join(folderPath, file));
-            if (command.name && typeof command.run === 'function') {
-                commands.set(command.name.toLowerCase(), command);
-            }
+        const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
+        for (const file of commandFiles) {
+            const command = require(`${folderPath}/${file}`);
+            if (command.name) commands.set(command.name, command);
         }
     }
 
-    console.log(`✅ ${commands.size} commandes chargées !`);
-}
+    // Quand un message arrive
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        const msg = messages[0];
+        if (!msg.message || msg.key.fromMe) return;
 
-async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('session');
-
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true,
-        logger: P({ level: 'silent' }),
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-
-        if (qr) qrcode.generate(qr, { small: true });
-
-        if (connection === 'close') {
-            const reason = lastDisconnect.error?.output?.statusCode;
-            console.log('Déconnexion :', reason);
-
-            if (reason !== DisconnectReason.loggedOut) startBot();
-        } else if (connection === 'open') {
-            console.log('✅ Connecté à WhatsApp !');
-        }
-    });
-
-    sock.ev.on('messages.upsert', async (msgUpdate) => {
-        const msg = msgUpdate.messages[0];
-        if (!msg.message) return;
-
-        const sender = msg.key.remoteJid;
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        let text = msg.message.conversation || msg.message.extendedTextMessage?.text;
         if (!text) return;
+        if (!text.startsWith(prefix)) return;
 
-        if (!text.startsWith(PREFIX)) return;
-
-        const args = text.slice(PREFIX.length).trim().split(/ +/);
+        const args = text.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
 
         const command = commands.get(commandName);
-        if (command) {
-            try {
-                await command.run(sock, msg, args);
-            } catch (err) {
-                console.error(`Erreur commande ${commandName}:`, err);
+        if (!command) return;
+
+        try {
+            await command.run(sock, msg, args);
+        } catch (error) {
+            console.error(error);
+            await sock.sendMessage(msg.key.remoteJid, { text: '❌ Une erreur est survenue lors de l’exécution de cette commande.' });
+        }
+    });
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            if ((lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut) {
+                startBot(); // reconnect
+            } else {
+                console.log('Déconnecté. Connectez-vous à nouveau.');
             }
+        } else if (connection === 'open') {
+            console.log('🤖 Bot WhatsApp connecté !');
         }
     });
 }
 
-// Chargement des commandes puis démarrage du bot
-loadCommands().then(startBot);
+startBot();
