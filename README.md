@@ -63,12 +63,12 @@ Déployez votre bot **rapidement et gratuitement** sur **Bot-hosting.net** :
 
 ---
 
-## 📲 Chaîne WhatsApp Officielle
+## 📲 Groupe WhatsApp Officielle
 
 Recevez toutes les annonces et mises à jour directement sur WhatsApp :  
 
 <p align="center">
-  <a href="https://whatsapp.com/channel/0029Vb6FFPM002T3SKA6bb2D" target="_blank" style="text-decoration:none;">
+  <a href="https://chat.whatsapp.com/DSvc4vCcdZEER4DodjvhIT" target="_blank" style="text-decoration:none;">
     <span style="
       display:inline-block;
       padding:14px 28px;
@@ -81,7 +81,7 @@ Recevez toutes les annonces et mises à jour directement sur WhatsApp :
       box-shadow: 0 6px 15px rgba(0,0,0,0.3);
       transition: all 0.2s ease-in-out;
     ">
-      💬 Rejoindre la chaîne WhatsApp
+      💬 Rejoindre le groupe WhatsApp
     </span>
   </a>
 </p>
