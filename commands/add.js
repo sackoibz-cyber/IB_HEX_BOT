@@ -7,11 +7,11 @@ export default {
   category: 'Groupe',
   group: true,
 
-  async execute(Kaya, m, args) {
+  async execute(ib-hex-bot, m, args) {
     try {
       // ❌ Group only
       if (!m.isGroup) {
-        return Kaya.sendMessage(
+        return ib-hex-bot.sendMessage(
           m.chat,
           { text: '❌ This command works only in groups.', contextInfo },
           { quoted: m }
@@ -23,9 +23,9 @@ export default {
 
       // ❌ No number provided
       if (!args[0]) {
-        return Kaya.sendMessage(
+        return ib-hex-bot.sendMessage(
           m.chat,
-          { text: '❌ Usage: `.add 243XXXXXXXXX`', contextInfo },
+          { text: '❌ Usage: `.add 224XXXXXXXXX`', contextInfo },
           { quoted: m }
         );
       }
@@ -33,7 +33,7 @@ export default {
       // 📞 Clean number
       const number = args[0].replace(/\D/g, '');
       if (number.length < 8) {
-        return Kaya.sendMessage(
+        return ib-hex-bot.sendMessage(
           m.chat,
           { text: '❌ Invalid phone number.', contextInfo },
           { quoted: m }
@@ -43,13 +43,13 @@ export default {
       const jid = `${number}@s.whatsapp.net`;
 
       // ➕ Add participant (silent)
-      await Kaya.groupParticipantsUpdate(m.chat, [jid], 'add');
+      await ib-hex-bot.groupParticipantsUpdate(m.chat, [jid], 'add');
 
       // ✅ No success message (silent mode)
 
     } catch (err) {
       console.error('❌ ADD ERROR:', err);
-      await Kaya.sendMessage(
+      await ib-hex-bot.sendMessage(
         m.chat,
         {
           text: '❌ Failed to add this user (private account or already in the group).',
