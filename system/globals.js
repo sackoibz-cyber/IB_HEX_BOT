@@ -1,4 +1,4 @@
-mport config from '../config.js';
+import config from '../config.js';
 
 // 🔹 Owners
 global.owner = Array.isArray(config.OWNERS)
