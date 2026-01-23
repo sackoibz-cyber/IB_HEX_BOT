@@ -18,7 +18,7 @@ const defaultConfig = {
   // 🔑 Identifiants
   SESSION_ID: "SESSION_ID",
   
-  OWNER_NUMBER: ["224xxxxxxxx"], 
+  OWNER_NUMBER: ["224XXXXXXXX"], 
 
   // ⚙️ Paramètres du bot
   PREFIX: "Ib",
